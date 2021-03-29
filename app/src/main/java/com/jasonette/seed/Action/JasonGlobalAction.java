@@ -124,43 +124,46 @@ public class JasonGlobalAction {
             SharedPreferences.Editor editor = pref.edit();
             JSONObject globalContext = ((Launcher)context.getApplicationContext()).getGlobal();
 
+            Boolean isPassive = action.has("passive");
+            Boolean isPassiveEnabled = false;
+
+            if (isPassive) {
+                isPassiveEnabled = action.getBoolean("passive");
+            }
+
             JSONObject options = action.getJSONObject("options");
 
             Iterator<String> keysIterator = options.keys();
             while (keysIterator.hasNext()) {
                 String key = (String) keysIterator.next();
                 try {
-                    Log.d("testing",  "valued");
-
                     JSONObject newItem = options.getJSONObject(key);
                     JSONArray existingArray = globalContext.getJSONArray(key);
-
-
-                    Log.d("ok let us see...", newItem.toString() + existingArray.toString());
-
                     int JSONlength = existingArray.length();
-                    newItem.put("_id", JSONlength);
+                    //passive mode = don't push if array already exist.
+                    if(!isPassiveEnabled) {
+                        newItem.put("_id", JSONlength);
 
-                    existingArray.put(newItem);
-
-                    JSONObject lookFor_ID = existingArray.getJSONObject(0);
-                    if(!lookFor_ID.has("_id")) {
-                        JSONArray newJsonArray = new JSONArray();
-                        for (int i = 0; i < JSONlength; i++) {
-                            JSONObject item = existingArray.getJSONObject(i);
-                            if (!item.has("_id")) {
-                                item.put("_id", i);
+                        existingArray.put(newItem);
+                        JSONObject lookFor_ID = existingArray.getJSONObject(0);
+                        if(!lookFor_ID.has("_id")) {
+                            JSONArray newJsonArray = new JSONArray();
+                            for (int i = 0; i < JSONlength; i++) {
+                                JSONObject item = existingArray.getJSONObject(i);
+                                if (!item.has("_id")) {
+                                    item.put("_id", i);
+                                }
+                                newJsonArray.put(item);
                             }
-                            newJsonArray.put(item);
-                        }
-                        editor.putString(key, newJsonArray.toString());
-                        ((Launcher)context.getApplicationContext()).setGlobal(key, newJsonArray);
+                            editor.putString(key, newJsonArray.toString());
+                            ((Launcher)context.getApplicationContext()).setGlobal(key, newJsonArray);
 
-                    } else {
-                        editor.putString(key, existingArray.toString());
-                        ((Launcher)context.getApplicationContext()).setGlobal(key, existingArray);
+                        } else {
+                            editor.putString(key, existingArray.toString());
+                            ((Launcher)context.getApplicationContext()).setGlobal(key, existingArray);
+                        }
+
                     }
-                        //Log.d("new array?", myTestArray.toString() + myTestArray[0].toString() + myTestArray[1].toString());
 
                     } catch(Exception e) {
                         //exception when the key is new
