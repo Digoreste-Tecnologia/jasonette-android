@@ -150,9 +150,8 @@ public class JasonGlobalAction {
                             JSONArray newJsonArray = new JSONArray();
                             for (int i = 0; i < JSONlength; i++) {
                                 JSONObject item = existingArray.getJSONObject(i);
-                                if (!item.has("_id")) {
-                                    item.put("_id", i);
-                                }
+                                //update all array index
+                                item.put("_id", i);
                                 newJsonArray.put(item);
                             }
                             editor.putString(key, newJsonArray.toString());
@@ -207,9 +206,15 @@ public class JasonGlobalAction {
                     JSONArray existingArray = globalContext.getJSONArray(key);
                     existingArray.remove(removeItem);
 
-
-                    editor.putString(key, existingArray.toString());
-                    ((Launcher)context.getApplicationContext()).setGlobal(key, existingArray);
+                    JSONArray newJsonArray = new JSONArray();
+                    for (int i = 0; i < existingArray.length(); i++) {
+                        JSONObject item = existingArray.getJSONObject(i);
+                        //update all array index
+                        item.put("_id", i);
+                        newJsonArray.put(item);
+                    }
+                    editor.putString(key, newJsonArray.toString());
+                    ((Launcher)context.getApplicationContext()).setGlobal(key, newJsonArray);
                 } catch(Exception e) {
                     //exception when the key is new
                     //in this case, we create a new array with the input values
