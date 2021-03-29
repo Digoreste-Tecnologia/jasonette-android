@@ -5,6 +5,7 @@ import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.net.Uri;
 import android.util.Base64;
 import android.util.Log;
 import android.view.View;
@@ -43,7 +44,7 @@ public class JasonImageComponent {
             // Add session if included
             SharedPreferences pref = context.getSharedPreferences("session", 0);
             JSONObject session = null;
-            URI uri_for_session = new URI(component.getString("url").toLowerCase());
+            URI uri_for_session = new URI(component.getString("url"));
             String session_domain = uri_for_session.getHost();
             if(pref.contains(session_domain)){
                 String str = pref.getString(session_domain, null);
@@ -82,6 +83,8 @@ public class JasonImageComponent {
                 return "file:///android_asset/file/" + url.substring(7);
             } else if(url.startsWith("data:image")) {
                 return url;
+            } else if(url.startsWith("content://")) {
+                return Uri.parse(url);
             } else {
                 LazyHeaders.Builder builder = JasonImageComponent.prepare(component, context);
                 return new GlideUrl(url, builder.build());
