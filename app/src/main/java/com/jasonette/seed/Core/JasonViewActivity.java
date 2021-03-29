@@ -13,9 +13,13 @@ import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.Parcelable;
 
 import androidx.annotation.NonNull;
@@ -73,6 +77,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -683,12 +688,154 @@ public class JasonViewActivity extends AppCompatActivity implements ActivityComp
             Log.d("Warning", e.getStackTrace()[0].getMethodName() + " : " + e.toString());
         }
     }
+
+    void onOnline() {
+        simple_trigger("$online", new JSONObject(), this);
+        try {
+            JSONObject head = model.jason.getJSONObject("$jason").getJSONObject("head");
+            JSONObject events = head.getJSONObject("actions");
+            if(events!=null && events.has("$online")){
+                // nothing
+            } else {
+                onShow();
+            }
+
+            if (launch_action != null) {
+                JSONObject copy = new JSONObject(launch_action.toString());
+                launch_action = null;
+                if (head.has("actions")) {
+                    model.jason.getJSONObject("$jason").getJSONObject("head").getJSONObject("actions").put("$launch", copy);
+                } else {
+                    JSONObject actions = new JSONObject();
+                    actions.put("$launch", copy);
+                    model.jason.getJSONObject("$jason").getJSONObject("head").put("actions", actions);
+                }
+                simple_trigger("$launch", new JSONObject(), JasonViewActivity.this);
+            }
+        } catch (Exception e){
+            Log.d("Warning", e.getStackTrace()[0].getMethodName() + " : " + e.toString());
+        }
+    }
+
+    void onOffline() {
+        simple_trigger("$offline", new JSONObject(), this);
+        try {
+            JSONObject head = model.jason.getJSONObject("$jason").getJSONObject("head");
+            JSONObject events = head.getJSONObject("actions");
+            if(events!=null && events.has("$offline")){
+                // nothing
+            } else {
+                onShow();
+            }
+
+            if (launch_action != null) {
+                JSONObject copy = new JSONObject(launch_action.toString());
+                launch_action = null;
+                if (head.has("actions")) {
+                    model.jason.getJSONObject("$jason").getJSONObject("head").getJSONObject("actions").put("$launch", copy);
+                } else {
+                    JSONObject actions = new JSONObject();
+                    actions.put("$launch", copy);
+                    model.jason.getJSONObject("$jason").getJSONObject("head").put("actions", actions);
+                }
+                simple_trigger("$launch", new JSONObject(), JasonViewActivity.this);
+            }
+        } catch (Exception e){
+            Log.d("Warning", e.getStackTrace()[0].getMethodName() + " : " + e.toString());
+        }
+    }
+
+    public boolean isThisDeviceConnected;
+
     void onLoad(){
         loaded = true;
         simple_trigger("$load", new JSONObject(), this);
         try {
             JSONObject head = model.jason.getJSONObject("$jason").getJSONObject("head");
             JSONObject events = head.getJSONObject("actions");
+
+            Log.d("Hello there from java", "some testinggggg");
+
+            try {
+                ConnectivityManager cm =
+                        (ConnectivityManager)((Launcher) getApplicationContext()).getSystemService(Context.CONNECTIVITY_SERVICE);
+
+                NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+                isThisDeviceConnected = activeNetwork != null &&
+                        activeNetwork.isConnectedOrConnecting();
+
+
+
+                if(isThisDeviceConnected){
+                    onOnline();
+                } else {
+                    onOffline();
+                }
+
+
+                thread = new HandlerThread("TimerThread");
+                thread.start();
+
+                timers = new HashMap<String, Runnable>();
+
+                handler = new Handler(thread.getLooper());
+
+                String name = "online-offline-event";
+
+
+
+                // Look up timer
+                // if it exists, reset first, and then start
+                if(timers.get(name) != null){
+                    cancelTimer(name);
+                }
+
+
+                final Runnable runnableCode = new Runnable() {
+                    @Override
+                    public void run() {
+
+                        ConnectivityManager cm =
+                                (ConnectivityManager)((Launcher) getApplicationContext()).getSystemService(Context.CONNECTIVITY_SERVICE);
+
+                        NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+                        boolean isConnected = activeNetwork != null &&
+                                activeNetwork.isConnectedOrConnecting();
+
+
+                        //Boolean isConnected = isInternetAvailable();
+                        Log.d("Handlers", "Called on main thread " + isConnected);
+
+                        if(isThisDeviceConnected != isConnected) {
+                            if(isConnected) {
+                                onOnline();
+                            } else {
+                                onOffline();
+                            }
+
+                            isThisDeviceConnected = isConnected;
+                        }
+
+
+
+                        handler.postDelayed(this, 2000);
+                    }
+                };
+
+                handler.postDelayed(runnableCode, 2000);
+
+                timers.put(name, runnableCode);
+
+
+
+
+
+
+
+
+            } catch (Exception e) {
+                Log.d("error", e.getStackTrace()[0].toString());
+            }
             if(events!=null && events.has("$load")){
                 // nothing
             } else {
@@ -711,6 +858,8 @@ public class JasonViewActivity extends AppCompatActivity implements ActivityComp
             Log.d("Warning", e.getStackTrace()[0].getMethodName() + " : " + e.toString());
         }
     }
+
+
     void onForeground(){
         // Not implemented yet
     }
@@ -1701,6 +1850,41 @@ public class JasonViewActivity extends AppCompatActivity implements ActivityComp
      * JASON VIEW
      *
      ************************************************************/
+
+    private HandlerThread thread;
+    private HashMap<String, Runnable> timers;
+    private Handler handler;
+
+    private void cancelTimer(String name){
+        if(name != null) {
+            Runnable runnableCode = timers.get(name);
+            if(runnableCode != null) {
+                handler.removeCallbacks(runnableCode);
+                timers.remove(name);
+            }
+        } else {
+            // Cancel all timers
+            for (String key : timers.keySet()) {
+                Runnable runnableCode = timers.get(key);
+                handler.removeCallbacks(runnableCode);
+                timers.remove(name);
+            }
+        }
+    }
+
+    public boolean isInternetAvailable() {
+        try {
+            InetAddress ipAddr = InetAddress.getByName("http://www.google.com");
+            //You can replace it with your name
+            Log.d("interet result", ipAddr.toString());
+            return !ipAddr.equals("");
+
+        } catch (Exception e) {
+            Log.d("error", e.getStackTrace()[0].toString() + " failed detecting network");
+            return false;
+        }
+    }
+
 
     public void build(JSONObject jason){
         // set fetched to true since build() is only called after network.request succeeds
