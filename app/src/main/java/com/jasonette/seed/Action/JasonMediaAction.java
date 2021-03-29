@@ -1,5 +1,6 @@
 package com.jasonette.seed.Action;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.media.AudioManager;
@@ -9,6 +10,11 @@ import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Base64;
 import android.util.Log;
+import android.Manifest;
+import androidx.core.content.ContextCompat;
+
+import android.content.pm.PackageManager;
+import androidx.core.app.ActivityCompat;
 
 import com.commonsware.cwac.cam2.AbstractCameraActivity;
 import com.commonsware.cwac.cam2.CameraActivity;
@@ -194,15 +200,6 @@ public class JasonMediaAction {
 
             }
 
-            // dispatchIntent method
-            // 1. triggers an external Intent
-            // 2. attaches a callback with all the payload so that we can pick it up where we left off when the intent returns
-
-            // the callback needs to specify the class name and the method name we wish to trigger after the intent returns
-            JSONObject callback = new JSONObject();
-            callback.put("class", "JasonMediaAction");
-            callback.put("method", "process");
-            JasonHelper.dispatchIntent(action, data, event, context, intent, callback);
         } catch (SecurityException e){
             JasonHelper.permission_exception("$media.camera", context);
         } catch (Exception e) {
@@ -251,6 +248,8 @@ public class JasonMediaAction {
                 try {
                     JSONObject ret = new JSONObject();
                     ret.put("data", encoded);
+                    //adding file path to image output
+                    ret.put("file_url", uri.toString());
                     ret.put("data_uri", data_uri);
                     ret.put("content_type", "image/jpeg");
                     JasonHelper.next("success", action, ret, event, context);
