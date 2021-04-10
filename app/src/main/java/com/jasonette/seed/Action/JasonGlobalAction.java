@@ -12,6 +12,8 @@ import org.json.JSONObject;
 
 import java.util.Iterator;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class JasonGlobalAction {
     public Object[] addToArray(Object[] arr, Object toInsert) {
@@ -253,14 +255,36 @@ public class JasonGlobalAction {
                     Log.d("ok let us see...", updatedValue.toString() + " ");
                     JSONArray existingArray = globalContext.getJSONArray(key);
 
+                    JSONObject newValueToPush = new JSONObject();
+
+                    String pointerPattern = "\\{\\{\\$(.+)\\}\\}";
+                    Pattern regex = Pattern.compile(pointerPattern);
+
+                    Iterator<String> newObjectIterator = updatedValue.keys();
+                    JSONObject oldObject = existingArray.getJSONObject(targetElement);
+
+                    while(newObjectIterator.hasNext()) {
+                        String myKey = newObjectIterator.next();
+                        String valued = updatedValue.getString(myKey);
+                        Matcher isPointer = regex.matcher(valued);
+                        if(isPointer.find()) {
+                            String fallbackValue = oldObject.getString(myKey);
+                            newValueToPush.put(myKey, fallbackValue);
+                        } else {
+                            newValueToPush.put(myKey, valued);
+                        }
+                    }
+
                     int arrayLength = existingArray.length();
                     JSONArray newArray = new JSONArray();
 
                     for (int i = 0; i < arrayLength; i++) {
                         if (targetElement == i) {
-                            newArray.put(targetElement);
+                            newValueToPush.put("_id", i);
+                            newArray.put(newValueToPush);
                         } else {
                             JSONObject existingObj = existingArray.getJSONObject(i);
+                            existingObj.put("_id", i);
                             newArray.put(existingObj);
                         }
                     }
