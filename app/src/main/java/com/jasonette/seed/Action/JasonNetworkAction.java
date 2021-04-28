@@ -168,8 +168,6 @@ public class JasonNetworkAction {
                                                 if (rowValue.startsWith("content://") || rowValue.startsWith("file://")) {
                                                     Uri newFileUri = Uri.parse(rowValue);
                                                         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-
-                                                    //Log.d("test", uri_for_session.toString() + session_domain.toString());
                                                         if (Build.VERSION.SDK_INT < 29) {
                                                             try {
                                                                 Bitmap bitmap = MediaStore.Images.Media.getBitmap(context.getContentResolver(), newFileUri);
