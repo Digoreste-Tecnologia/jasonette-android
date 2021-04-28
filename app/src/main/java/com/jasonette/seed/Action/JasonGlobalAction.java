@@ -3,7 +3,6 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.Log;
 
-import com.jasonette.seed.Core.JasonViewActivity;
 import com.jasonette.seed.Helper.JasonHelper;
 import com.jasonette.seed.Launcher.Launcher;
 
@@ -11,7 +10,6 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.Iterator;
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -249,6 +247,10 @@ public class JasonGlobalAction {
 
             JSONObject options = action.getJSONObject("options");
 
+            Boolean passiveMode = false;
+            if(action.has("passive")) {
+                passiveMode = action.getBoolean("passive");
+            }
 
             Iterator<String> keysIterator = options.keys();
             while (keysIterator.hasNext()) {
@@ -270,17 +272,21 @@ public class JasonGlobalAction {
 
                     while(newObjectIterator.hasNext()) {
                         String myKey = newObjectIterator.next();
-                        String valued = updatedValue.getString(myKey);
-                        Matcher isPointer = regex.matcher(valued);
-                        if(isPointer.find()) {
+                        if(updatedValue.has(myKey)) {
+                            String valued = updatedValue.getString(myKey);
+                            Matcher isPointer = regex.matcher(valued);
+                            if(isPointer.find()) {
+                                String fallbackValue = oldObject.getString(myKey);
+                                newValueToPush.put(myKey, fallbackValue);
+                            } else {
+                                newValueToPush.put(myKey, valued);
+                            }
+                        }  else {
                             String fallbackValue = oldObject.getString(myKey);
                             newValueToPush.put(myKey, fallbackValue);
-                        } else {
-                            newValueToPush.put(myKey, valued);
                         }
                     }
-
-                    int arrayLength = existingArray.length();
+               int arrayLength = existingArray.length();
                     JSONArray newArray = new JSONArray();
 
                     for (int i = 0; i < arrayLength; i++) {
@@ -299,7 +305,7 @@ public class JasonGlobalAction {
                 } catch(Exception e) {
                     //exception when the key is new
                     //in this case, we create a new array with the input values
-                    //Log.d("warning", e.getStackTrace()[0].getMethodName() + " : " + e.toString());
+                    Log.d("11warning", e.getStackTrace()[0].getMethodName() + " : " + e.toString());
                     JSONArray newArray = new JSONArray();
                     JSONObject newItem = options.getJSONObject(key);
                     newArray.put(newItem);
@@ -313,6 +319,55 @@ public class JasonGlobalAction {
             // Execute next
             JasonHelper.next("success", action, ((Launcher)context.getApplicationContext()).getGlobal(), event, context);
 
+        } catch (Exception e) {
+            Log.d("Warning", e.getStackTrace()[0].getMethodName() + " : " + e.toString());
+        }
+    }
+    public void template_update(final JSONObject action, final JSONObject data, final JSONObject event, final Context context) {
+        try {
+            SharedPreferences pref = context.getSharedPreferences("global", 0);
+            SharedPreferences.Editor editor = pref.edit();
+
+            JSONObject globalContext = ((Launcher)context.getApplicationContext()).getGlobal();
+
+            JSONObject options = action.getJSONObject("options");
+
+            String target_list = action.getString("target");
+
+            int pos = Integer.parseInt(action.getString("position"));
+
+            JSONArray existingArray = globalContext.getJSONArray(target_list);
+
+            JSONArray newArray = new JSONArray();
+
+            if(existingArray.length() < pos) {
+                JSONObject newObj = new JSONObject();
+                Iterator<String> keysIterator = existingArray.getJSONObject(0).keys();
+                while (keysIterator.hasNext()) {
+                    String key = (String) keysIterator.next();
+                    if(options.has(key)) {
+                        newObj.put(key, options.getString(key));
+                    } else {
+                        newObj.put(key, existingArray.getJSONObject(pos).getString(key));
+                    }
+                }
+                for(int i = 0; i < existingArray.length(); i++) {
+                    if(i != pos) {
+                        newArray.put(pos, existingArray.getJSONObject(i));
+                    } else {
+                        newArray.put(pos, newObj);
+                    }
+                }
+
+                newArray.put(pos, newObj);
+
+                Log.d("newval", newArray.toString());
+                editor.putString(target_list, newArray.toString());
+                ((Launcher)context.getApplicationContext()).setGlobal(target_list, newArray);
+            }
+            editor.commit();
+            // Execute next
+            JasonHelper.next("success", action, ((Launcher)context.getApplicationContext()).getGlobal(), event, context);
         } catch (Exception e) {
             Log.d("Warning", e.getStackTrace()[0].getMethodName() + " : " + e.toString());
         }
