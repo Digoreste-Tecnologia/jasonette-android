@@ -172,6 +172,17 @@ public class JasonMediaAction {
                     edit = true;
                 }
             }
+            if(ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE)
+                    == PackageManager.PERMISSION_DENIED){
+                JasonHelper.permission_exception("$media.camera", context);
+                ActivityCompat.requestPermissions((Activity) context,new String[] {Manifest.permission.READ_EXTERNAL_STORAGE}, 0x3);
+            }
+
+            if(ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    == PackageManager.PERMISSION_DENIED){
+                JasonHelper.permission_exception("$media.camera", context);
+                ActivityCompat.requestPermissions((Activity) context,new String[] {Manifest.permission.WRITE_EXTERNAL_STORAGE}, 0x3);
+            }
 
             Intent intent;
             if(type.equalsIgnoreCase("video")) {
