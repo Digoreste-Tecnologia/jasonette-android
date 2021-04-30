@@ -266,9 +266,9 @@ public class JasonGlobalAction {
 
                     String pointerPattern = "\\{\\{\\$(.+)\\}\\}";
                     Pattern regex = Pattern.compile(pointerPattern);
-
-                    Iterator<String> newObjectIterator = updatedValue.keys();
                     JSONObject oldObject = existingArray.getJSONObject(targetElement);
+                    Iterator<String> newObjectIterator = oldObject.keys();
+                    
 
                     while(newObjectIterator.hasNext()) {
                         String myKey = newObjectIterator.next();
