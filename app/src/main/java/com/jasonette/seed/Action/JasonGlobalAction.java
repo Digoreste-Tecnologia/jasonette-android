@@ -197,7 +197,30 @@ public class JasonGlobalAction {
                         //in this case, we create a new array with the input values
                         //Log.d("warning", e.getStackTrace()[0].getMethodName() + " : " + e.toString());
                         JSONArray newArray = new JSONArray();
-                        JSONObject newItem = options.getJSONObject(key);
+                        JSONObject unparsedItem = options.getJSONObject(key);
+                        JSONObject newItem = new JSONObject();
+                        newItem.put("_id", 0);
+
+                        Iterator<String> keysUnparsed = unparsedItem.keys();
+                        while (keysUnparsed.hasNext()) {
+                            String unKey = keysUnparsed.next();
+                            String unValue = unparsedItem.getString(unKey);
+
+                            Matcher isInput = inputRegex.matcher(unValue);
+
+                            if (isInput.find()) {
+                                String varKey = isInput.group(1);
+                                if(localRef.has(varKey)) {
+                                    // using updated values from local variables
+                                    newItem.put(unKey, localRef.getString(varKey));
+                                } else {
+                                    newItem.put(unKey, "");
+                                }
+                            } else {
+                                newItem.put(unKey, unValue);
+                            }
+                        }
+
                         newArray.put(newItem);
                         //Log.d("new object", newArray.toString() + "array to set");
                         editor.putString(key, newArray.toString());
@@ -211,7 +234,8 @@ public class JasonGlobalAction {
             JasonHelper.next("success", action, ((Launcher)context.getApplicationContext()).getGlobal(), event, context);
 
         } catch (Exception e) {
-            Log.d("Warning", e.getStackTrace()[0].getMethodName() + " : " + e.toString());
+            Log.d("Warning", e.getStackTrace()[0].getMethodName() + " : pushed " + e.toString());
+            JasonHelper.next("error", action, ((Launcher)context.getApplicationContext()).getGlobal(), event, context);
         }
     }
 
