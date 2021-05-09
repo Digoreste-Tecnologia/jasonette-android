@@ -137,6 +137,7 @@ public class JasonGlobalAction {
             Pattern inputRegex = Pattern.compile(inputPattern);
             // get local variables reference
             JSONObject localRef = ((JasonViewActivity) context).model.var;
+            JSONObject options = action.getJSONObject("options");
 
             Iterator<String> keysIterator = options.keys();
             while (keysIterator.hasNext()) {
