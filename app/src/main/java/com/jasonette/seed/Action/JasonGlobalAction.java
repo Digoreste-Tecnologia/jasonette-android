@@ -3,6 +3,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.Log;
 
+import com.jasonette.seed.Core.JasonViewActivity;
 import com.jasonette.seed.Helper.JasonHelper;
 import com.jasonette.seed.Launcher.Launcher;
 
@@ -131,13 +132,40 @@ public class JasonGlobalAction {
                 isPassiveEnabled = action.getBoolean("passive");
             }
 
-            JSONObject options = action.getJSONObject("options");
+            // {{$input.variable}} pattern
+            String inputPattern = "\\{\\{\\$input\\.(.+)\\}\\}";
+            Pattern inputRegex = Pattern.compile(inputPattern);
+            // get local variables reference
+            JSONObject localRef = ((JasonViewActivity) context).model.var;
 
             Iterator<String> keysIterator = options.keys();
             while (keysIterator.hasNext()) {
                 String key = (String) keysIterator.next();
                 try {
-                    JSONObject newItem = options.getJSONObject(key);
+                    //treat the raw value as unparsed item in order to parse $input.variable values
+                    JSONObject unparsedItem = options.getJSONObject(key);
+                    JSONObject newItem = new JSONObject();
+
+                    Iterator<String> keysUnparsed = unparsedItem.keys();
+                    while (keysUnparsed.hasNext()) {
+                        String unKey = keysUnparsed.next();
+                        String unValue = unparsedItem.getString(unKey);
+
+                        Matcher isInput = inputRegex.matcher(unValue);
+
+                        if (isInput.find()) {
+                            String varKey = isInput.group(1);
+                            if(localRef.has(varKey)) {
+                                // using updated values from local variables
+                                newItem.put(unKey, localRef.getString(varKey));
+                            } else {
+                                newItem.put(unKey, "");
+                            }
+                        } else {
+                            newItem.put(unKey, unValue);
+                        }
+                    }
+
                     JSONArray existingArray = globalContext.getJSONArray(key);
                     int JSONlength = existingArray.length();
                     //passive mode = don't push if array already exist.
@@ -169,7 +197,30 @@ public class JasonGlobalAction {
                         //in this case, we create a new array with the input values
                         //Log.d("warning", e.getStackTrace()[0].getMethodName() + " : " + e.toString());
                         JSONArray newArray = new JSONArray();
-                        JSONObject newItem = options.getJSONObject(key);
+                        JSONObject unparsedItem = options.getJSONObject(key);
+                        JSONObject newItem = new JSONObject();
+                        newItem.put("_id", 0);
+
+                        Iterator<String> keysUnparsed = unparsedItem.keys();
+                        while (keysUnparsed.hasNext()) {
+                            String unKey = keysUnparsed.next();
+                            String unValue = unparsedItem.getString(unKey);
+
+                            Matcher isInput = inputRegex.matcher(unValue);
+
+                            if (isInput.find()) {
+                                String varKey = isInput.group(1);
+                                if(localRef.has(varKey)) {
+                                    // using updated values from local variables
+                                    newItem.put(unKey, localRef.getString(varKey));
+                                } else {
+                                    newItem.put(unKey, "");
+                                }
+                            } else {
+                                newItem.put(unKey, unValue);
+                            }
+                        }
+
                         newArray.put(newItem);
                         //Log.d("new object", newArray.toString() + "array to set");
                         editor.putString(key, newArray.toString());
@@ -183,7 +234,8 @@ public class JasonGlobalAction {
             JasonHelper.next("success", action, ((Launcher)context.getApplicationContext()).getGlobal(), event, context);
 
         } catch (Exception e) {
-            Log.d("Warning", e.getStackTrace()[0].getMethodName() + " : " + e.toString());
+            Log.d("Warning", e.getStackTrace()[0].getMethodName() + " : pushed " + e.toString());
+            JasonHelper.next("error", action, ((Launcher)context.getApplicationContext()).getGlobal(), event, context);
         }
     }
 
