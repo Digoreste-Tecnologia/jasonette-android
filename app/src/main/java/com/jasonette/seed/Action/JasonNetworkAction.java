@@ -174,7 +174,7 @@ public class JasonNetworkAction {
                                                                 bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream);
                                                                 byte[] byteArray = outputStream.toByteArray();
                                                                 String encodedString = Base64.encodeToString(byteArray, Base64.DEFAULT);
-                                                                newRow.put(rowKey, encodedString);
+                                                                newRow.put(rowKey, "data:image/jpeg;base64," + encodedString);
                                                             } catch (SecurityException e) {
                                                                 newRow.put(rowKey, rowValue);
                                                                 JSONObject errorItem = new JSONObject();
@@ -193,7 +193,7 @@ public class JasonNetworkAction {
                                                                 byte[] byteArray = JasonHelper.readBytes(stream);
                                                                 String encodedString = Base64.encodeToString(byteArray, Base64.DEFAULT);
                                                                 stream.close();
-                                                                newRow.put(rowKey, encodedString);
+                                                                newRow.put(rowKey, "data:image/jpeg;base64," + encodedString);
                                                             } catch (SecurityException e) {
                                                                 StackTraceElement[] stackTrace = e.getStackTrace();
                                                                 JSONObject errorItem = new JSONObject();
